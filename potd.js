@@ -15,79 +15,94 @@
 
 // Raw URL of pokemon.json. For a public GitHub repo it looks like:
 // https://raw.githubusercontent.com/<username>/<repo>/main/pokemon.json
-const DATA_URL = "https://raw.githubusercontent.com/YOUR_USERNAME/potd/main/pokemon.json"
-const PREVIEW_SIZE = "medium" // size previewed with ?preview=1 when run in app
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
-  "August", "September", "October", "November", "December"]
+const DATA_URL =
+  "https://raw.githubusercontent.com/cehaaa/potd/main/pokemon.json";
+const PREVIEW_SIZE = "medium"; // size previewed with ?preview=1 when run in app
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 // ---------- data ----------
 
 // Downloads the list from DATA_URL and keeps a copy on the phone, so the
 // widget still works offline or if GitHub is unreachable.
 async function loadData() {
-  const fm = FileManager.local()
-  const cache = fm.joinPath(fm.documentsDirectory(), "potd-cache.json")
-  let raw = null
+  const fm = FileManager.local();
+  const cache = fm.joinPath(fm.documentsDirectory(), "potd-cache.json");
+  let raw = null;
   try {
-    const req = new Request(DATA_URL)
-    req.timeoutInterval = 10
-    raw = await req.loadString()
-    JSON.parse(raw) // only cache valid JSON
-    fm.writeString(cache, raw)
+    const req = new Request(DATA_URL);
+    req.timeoutInterval = 10;
+    raw = await req.loadString();
+    JSON.parse(raw); // only cache valid JSON
+    fm.writeString(cache, raw);
   } catch (_) {
-    raw = fm.fileExists(cache) ? fm.readString(cache) : null
+    raw = fm.fileExists(cache) ? fm.readString(cache) : null;
   }
-  if (!raw) throw new Error(`Couldn't load ${DATA_URL}`)
+  if (!raw) throw new Error(`Couldn't load ${DATA_URL}`);
 
-  return JSON.parse(raw).map(e => {
-    const [, day, month] = e.date.match(/^(\d+)\D*\s+(\w+)$/)
-    return { ...e, day: Number(day), month: MONTHS.indexOf(month) }
-  })
+  return JSON.parse(raw).map((e) => {
+    const [, day, month] = e.date.match(/^(\d+)\D*\s+(\w+)$/);
+    return { ...e, day: Number(day), month: MONTHS.indexOf(month) };
+  });
 }
 
 // Index of the entry for a given date. Falls back to the previous day
 // when a date has no entry (e.g. 29th February).
 function indexFor(entries, date) {
   for (let day = date.getDate(); day > 0; day--) {
-    const i = entries.findIndex(e => e.month === date.getMonth() && e.day === day)
-    if (i !== -1) return i
+    const i = entries.findIndex(
+      (e) => e.month === date.getMonth() && e.day === day,
+    );
+    if (i !== -1) return i;
   }
-  return 0
+  return 0;
 }
 
 function addDays(date, n) {
-  const d = new Date(date)
-  d.setDate(d.getDate() + n)
-  return d
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
 }
 
 function nextMidnight() {
-  const d = addDays(new Date(), 1)
-  d.setHours(0, 0, 5, 0)
-  return d
+  const d = addDays(new Date(), 1);
+  d.setHours(0, 0, 5, 0);
+  return d;
 }
 
 function weekday(date) {
-  const f = new DateFormatter()
-  f.dateFormat = "EEEE"
-  return f.string(date)
+  const f = new DateFormatter();
+  f.dateFormat = "EEEE";
+  return f.string(date);
 }
 
 // ---------- images ----------
 
 async function getImage(url) {
-  if (!url) return null
-  const fm = FileManager.local()
-  const dir = fm.joinPath(fm.cacheDirectory(), "potd")
-  if (!fm.fileExists(dir)) fm.createDirectory(dir, true)
-  const path = fm.joinPath(dir, url.split("/").pop())
-  if (fm.fileExists(path)) return fm.readImage(path)
+  if (!url) return null;
+  const fm = FileManager.local();
+  const dir = fm.joinPath(fm.cacheDirectory(), "potd");
+  if (!fm.fileExists(dir)) fm.createDirectory(dir, true);
+  const path = fm.joinPath(dir, url.split("/").pop());
+  if (fm.fileExists(path)) return fm.readImage(path);
   try {
-    const img = await new Request(url).loadImage()
-    fm.writeImage(path, img)
-    return img
+    const img = await new Request(url).loadImage();
+    fm.writeImage(path, img);
+    return img;
   } catch (_) {
-    return null
+    return null;
   }
 }
 
@@ -99,92 +114,102 @@ const C = {
   accent: Color.dynamic(new Color("#D9372B"), new Color("#FF6B5E")),
   text: Color.dynamic(new Color("#1E1414"), new Color("#FFFFFF")),
   muted: Color.dynamic(new Color("#7A5E5A"), new Color("#B8A6A9")),
-}
+};
 
 function addCentered(parent, build) {
-  const row = parent.addStack()
-  row.layoutHorizontally()
-  row.addSpacer()
-  build(row)
-  row.addSpacer()
-  return row
+  const row = parent.addStack();
+  row.layoutHorizontally();
+  row.addSpacer();
+  build(row);
+  row.addSpacer();
+  return row;
 }
 
 function addText(stack, str, font, color, lines = 1) {
-  const t = stack.addText(str)
-  t.font = font
-  t.textColor = color
-  t.lineLimit = lines
-  t.minimumScaleFactor = 0.6
-  return t
+  const t = stack.addText(str);
+  t.font = font;
+  t.textColor = color;
+  t.lineLimit = lines;
+  t.minimumScaleFactor = 0.6;
+  return t;
 }
 
 function buildWidget(entry, img, date, family, offset) {
-  const w = new ListWidget()
-  w.refreshAfterDate = nextMidnight()
-  w.url = `${URLScheme.forRunningScript()}?offset=${offset}`
+  const w = new ListWidget();
+  w.refreshAfterDate = nextMidnight();
+  w.url = `${URLScheme.forRunningScript()}?offset=${offset}`;
 
-  const label = offset === 0 ? "POKÉMON OF THE DAY" : weekday(date).toUpperCase()
-  const dateLine = `${weekday(date)} · ${entry.date}`
+  const label =
+    offset === 0 ? "POKÉMON OF THE DAY" : weekday(date).toUpperCase();
+  const dateLine = `${weekday(date)} · ${entry.date}`;
 
   // Lock screen widgets
   if (family === "accessoryCircular") {
-    if (img) w.addImage(img).applyFittingContentMode()
-    return w
+    if (img) w.addImage(img).applyFittingContentMode();
+    return w;
   }
   if (family === "accessoryInline") {
-    w.addText(`${entry.name} · ${entry.date}`)
-    return w
+    w.addText(`${entry.name} · ${entry.date}`);
+    return w;
   }
   if (family === "accessoryRectangular") {
-    addText(w, entry.name, Font.boldSystemFont(15), Color.white())
-    addText(w, entry.date, Font.systemFont(12), Color.white())
-    return w
+    addText(w, entry.name, Font.boldSystemFont(15), Color.white());
+    addText(w, entry.date, Font.systemFont(12), Color.white());
+    return w;
   }
 
-  const g = new LinearGradient()
-  g.colors = [C.bgTop, C.bgBottom]
-  g.locations = [0, 1]
-  w.backgroundGradient = g
+  const g = new LinearGradient();
+  g.colors = [C.bgTop, C.bgBottom];
+  g.locations = [0, 1];
+  w.backgroundGradient = g;
 
   if (family === "medium") {
-    w.setPadding(12, 14, 12, 16)
-    const row = w.addStack()
-    row.layoutHorizontally()
-    row.centerAlignContent()
-    if (img) row.addImage(img).imageSize = new Size(130, 130)
-    row.addSpacer(12)
-    const col = row.addStack()
-    col.layoutVertically()
-    addText(col, label, Font.semiboldSystemFont(10), C.accent)
-    col.addSpacer(6)
-    addText(col, entry.name, Font.boldRoundedSystemFont(24), C.text, 2)
-    col.addSpacer(4)
-    addText(col, weekday(date), Font.mediumSystemFont(13), C.muted)
-    addText(col, entry.date, Font.mediumSystemFont(13), C.muted)
-    row.addSpacer()
-    return w
+    w.setPadding(16, 18, 16, 18);
+    const row = w.addStack();
+    row.layoutHorizontally();
+    row.centerAlignContent();
+    if (img) row.addImage(img).imageSize = new Size(124, 124);
+    row.addSpacer(16);
+    const col = row.addStack();
+    col.layoutVertically();
+    addText(col, label, Font.semiboldSystemFont(10), C.accent);
+    col.addSpacer(6);
+    addText(col, entry.name, Font.boldRoundedSystemFont(24), C.text, 2);
+    col.addSpacer(4);
+    addText(col, weekday(date), Font.mediumSystemFont(13), C.muted);
+    addText(col, entry.date, Font.mediumSystemFont(13), C.muted);
+    row.addSpacer();
+    return w;
   }
 
-  const large = family === "large" || family === "extraLarge"
-  w.setPadding(large ? 16 : 10, 12, large ? 16 : 12, 12)
-  addText(w, label, Font.semiboldSystemFont(large ? 12 : 9), C.accent)
-  w.addSpacer()
+  const large = family === "large" || family === "extraLarge";
+  const pad = large ? 22 : 15;
+  w.setPadding(pad, pad, pad, pad);
+  addText(w, label, Font.semiboldSystemFont(large ? 12 : 9), C.accent);
+  w.addSpacer();
   if (img) {
-    const s = large ? 230 : 84
-    addCentered(w, row => { row.addImage(img).imageSize = new Size(s, s) })
+    const s = large ? 222 : 80;
+    addCentered(w, (row) => {
+      row.addImage(img).imageSize = new Size(s, s);
+    });
   }
-  w.addSpacer()
-  addText(w, entry.name, Font.boldRoundedSystemFont(large ? 26 : 15), C.text)
-  addText(w, large ? dateLine : entry.date, Font.mediumSystemFont(large ? 14 : 11), C.muted)
-  return w
+  w.addSpacer();
+  addText(w, entry.name, Font.boldRoundedSystemFont(large ? 26 : 15), C.text);
+  addText(
+    w,
+    large ? dateLine : entry.date,
+    Font.mediumSystemFont(large ? 14 : 11),
+    C.muted,
+  );
+  return w;
 }
 
 // ---------- in-app swipe view ----------
 
 function buildHTML(entries, start) {
-  const data = JSON.stringify(entries.map(e => ({ n: e.name, d: e.date, i: e.image })))
-    .replace(/</g, "\\u003c")
+  const data = JSON.stringify(
+    entries.map((e) => ({ n: e.name, d: e.date, i: e.image })),
+  ).replace(/</g, "\\u003c");
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8">
@@ -255,33 +280,33 @@ function buildHTML(entries, start) {
   addEventListener('resize', () => go(current()));
   requestAnimationFrame(() => { go(START); update(); });
 </script>
-</body></html>`
+</body></html>`;
 }
 
 // ---------- main ----------
 
-const entries = await loadData()
-const params = args.queryParameters || {}
-const offset = Number(params.offset ?? args.widgetParameter ?? 0) || 0
-const now = new Date()
-const date = addDays(now, offset)
-const todayIndex = indexFor(entries, now)
-const index = indexFor(entries, date)
+const entries = await loadData();
+const params = args.queryParameters || {};
+const offset = Number(params.offset ?? args.widgetParameter ?? 0) || 0;
+const now = new Date();
+const date = addDays(now, offset);
+const todayIndex = indexFor(entries, now);
+const index = indexFor(entries, date);
 
 if (config.runsInWidget || params.preview) {
-  const entry = entries[index]
-  const img = await getImage(entry.image)
-  const family = config.widgetFamily || PREVIEW_SIZE
-  const widget = buildWidget(entry, img, date, family, offset)
+  const entry = entries[index];
+  const img = await getImage(entry.image);
+  const family = config.widgetFamily || PREVIEW_SIZE;
+  const widget = buildWidget(entry, img, date, family, offset);
   if (config.runsInWidget) {
-    Script.setWidget(widget)
+    Script.setWidget(widget);
   } else {
-    await widget[`present${family[0].toUpperCase()}${family.slice(1)}`]()
+    await widget[`present${family[0].toUpperCase()}${family.slice(1)}`]();
   }
 } else {
-  const view = new WebView()
-  await view.loadHTML(buildHTML(entries, { today: todayIndex, index }))
-  await view.present(true)
+  const view = new WebView();
+  await view.loadHTML(buildHTML(entries, { today: todayIndex, index }));
+  await view.present(true);
 }
 
-Script.complete()
+Script.complete();
